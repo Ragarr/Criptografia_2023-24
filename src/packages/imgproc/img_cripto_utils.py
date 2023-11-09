@@ -20,12 +20,12 @@ class ImageCryptoUtils:
 
         # get the iv from the image metadata
         metadata = ImageCryptoUtils.__read_metadata(img)
-        iv = bytes.fromhex(metadata["iv"])
-        salt = bytes.fromhex(metadata["salt"])
-        x = int(metadata["x"])
-        y = int(metadata["y"])
-        width = int(metadata["width"])
-        height = int(metadata["height"])
+        iv = bytes.fromhex(metadata["aes_iv"])
+        salt = bytes.fromhex(metadata["aes_key_salt"])
+        x = int(metadata["encription_zone_x"])
+        y = int(metadata["encription_zone_y"])
+        width = int(metadata["encription_zone_width"])
+        height = int(metadata["encription_zone_height"])
 
         # generate key from password
         key = PBKDF2HMAC(
@@ -80,15 +80,14 @@ class ImageCryptoUtils:
         iv = os.urandom(16)
 
         # write the iv and salt in the image metadata
-        metadata = {"iv": iv.hex(),
-                    "salt": salt.hex(),
-                    "algo": "AES-192",
-                    "x": x,
-                    "y": y,
-                    "width": width,
-                    "height": height,
+        metadata = {"aes_iv": iv.hex(),
+                    "aes_key_salt": salt.hex(),
+                    "encription_zone_x": x,
+                    "encription_zone_y": y,
+                    "encription_zone_width": width,
+                    "encription_zone_height": height,
                     }
-        ImageCryptoUtils.__write_metadata(img, metadata)
+        ImageCryptoUtils._write_metadata(img, metadata)
 
         # create cipher
         cipher = Cipher(algorithms.AES(key), modes.CTR(iv))
@@ -108,7 +107,7 @@ class ImageCryptoUtils:
         return img
 
     @staticmethod
-    def __write_metadata(img: Image, new_metadata: dict) -> None:
+    def _write_metadata(img: Image, new_metadata: dict) -> None:
         """
         updates the metadata of the image
         :param img: image
@@ -138,10 +137,11 @@ class ImageCryptoUtils:
         h = hmac.HMAC(key, hashes.SHA256())
         img_bytes = img.tobytes()
 
-        iv = bytes.fromhex(ImageCryptoUtils.__read_metadata(img)["iv"])
-        salt = bytes.fromhex(ImageCryptoUtils.__read_metadata(img)["salt"])
+        iv = bytes.fromhex(ImageCryptoUtils.__read_metadata(img)["aes_iv"])
+        salt = bytes.fromhex(ImageCryptoUtils.__read_metadata(img)["aes_key_salt"])
         # FIXME 
         # el key debe ir encriptado con RSA del server
         h.update(img_bytes + iv + salt + key)
-        signature = h.finalize()
-        ImageCryptoUtils.__write_metadata(img, {"hash": signature.hex(), "key": key.hex()})
+        img_hash = h.finalize()
+        ImageCryptoUtils._write_metadata(img, {"hash_key": key.hex()})
+        return img_hash

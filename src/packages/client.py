@@ -2,6 +2,8 @@ from packages.server import Server, ImgPackage
 from packages.imgproc import *
 from PIL import Image
 from packages.imgproc.img_cripto_utils import ImageCryptoUtils
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from cryptography.hazmat.primitives import hashes, serialization
 
 
 class Client:
@@ -9,7 +11,9 @@ class Client:
         self.username = None
         self.password = None
         self.encryptor = None
-        self.__server = Server()
+        self._server = Server()
+        self.__private_key = None
+        self._public_key = None
 
     def get_images(self, num: int | None = -1, username: str | None = None,
                    date: str | None = None, time: str | None = None) -> list:
@@ -39,7 +43,7 @@ class Client:
                 raise Exception("Date must be specified if time is specified")
 
         if username is None:
-            images = self.__server.get_images(num=num, username=username, date=date, time=time)
+            images = self._server.get_images(num=num, username=username, date=date, time=time)
             progress = 0
             for i in images:
                 yield round((progress / len(images)) * 100, 2), i
@@ -47,7 +51,7 @@ class Client:
             return
 
         # if the user is logged in, we will return de decrypted images
-        images = self.__server.get_images(num=num, username=username, date=date, time=time)
+        images = self._server.get_images(num=num, username=username, date=date, time=time)
         decrypted_images = []
         progress = 0
         for im in images:
@@ -66,7 +70,7 @@ class Client:
             password (str): password of the user
         """
 
-        return self.__server.create_user(name, password)
+        return self._server.create_user(name, password)
 
     def logout(self):
         """
@@ -85,17 +89,23 @@ class Client:
             bool: True if the user was logged in, False otherwise
         """
 
-        if self.__server.login(name, password):
+        if self._server.login(name, password):
             self.username = name
             self.password = password
+            self.__private_key = rsa.generate_private_key(
+                public_exponent=65537,
+                key_size=4096,
+            )
+            self._public_key = self.__private_key.public_key()
+
 
         else:
             raise ValueError("User or password incorrect")
 
     def remove_user(self) -> None:
         """Removes the user from the server"""
-        if self.__server.login(self.username, self.password):
-            self.__server.remove_user(self.username, self.password)
+        if self._server.login(self.username, self.password):
+            self._server.remove_user(self.username, self.password)
 
     def upload_photo(self, path: str, x: int = 0, y: int = 0, w: int = 200, h: int = 200) -> None:
         """Uploads a photo to the server
@@ -119,9 +129,23 @@ class Client:
 
         # encrypt image 
         image = ImageCryptoUtils.encrypt(image, self.password, x, y, w, h)
-        ImageCryptoUtils.generate_image_hash(image)
+        img_hash = ImageCryptoUtils.generate_image_hash(image)
+        # firmar hash
+        signature = self.__private_key.sign(
+            img_hash,
+            padding.PSS(
+                mgf=padding.MGF1(hashes.SHA256()),
+                salt_length=padding.PSS.MAX_LENGTH
+            ),
+            hashes.SHA256()
+        )
+        pem = self._public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+        ImageCryptoUtils._write_metadata(image, {"signature":signature.hex(), "public_key": pem.hex()} )
         # upload image
-        return self.__server.store_image(image, self.username, self.password)
+        return self._server.store_image(image, self.username, self.password)
 
     def remove_image(self, date: str, time: str) -> None:
         """Removes the image with the given name
@@ -129,4 +153,4 @@ class Client:
             date (str): date of the image
             time (str): time of the image
         """
-        return self.__server.remove_image(self.username, self.password, date, time)
+        return self._server.remove_image(self.username, self.password, date, time)

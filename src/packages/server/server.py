@@ -1,8 +1,11 @@
 from .user import User
 from PIL import Image, PngImagePlugin
 from .storage_manager import StorageManager
-from cryptography.hazmat.primitives import hashes, hmac
+from cryptography.hazmat.primitives import hashes, hmac, serialization
 from cryptography.hazmat.primitives.kdf.scrypt  import Scrypt
+from cryptography.hazmat.primitives.asymmetric import rsa, padding 
+from cryptography.exceptions import InvalidSignature
+
 import re
 import uuid
 
@@ -112,20 +115,46 @@ class Server():
         
         # checK  tags #TODO
         pass
-        # check signature #TODO
+        # check hash signature #TODO
+
+        # get metadata
         image_metadata = image.info
-        hash = image_metadata["hash"]
-        key = bytes.fromhex(image_metadata["key"]) # FIXME el key habra que desencriptarlo
+
         # regenerate hash
         img_bytes = image.tobytes()
-        iv = bytes.fromhex(image_metadata["iv"])
-        salt = bytes.fromhex(image_metadata["salt"])
+        iv = bytes.fromhex(image_metadata["aes_iv"])
+        salt = bytes.fromhex(image_metadata["aes_key_salt"])
+        key = bytes.fromhex(image_metadata["hash_key"])
 
         h = hmac.HMAC(key, hashes.SHA256())
         h.update(img_bytes + iv + salt + key)
-        signature = h.finalize()
-        if hash != signature.hex():
-            raise ValueError("Hashes do not match")
+        img_hash = h.finalize()
+
+        
+        # check hash signature
+        hash_sign = image_metadata["signature"]
+        # get public key # FIXME
+        public_key = image_metadata["public_key"]
+        public_key = serialization.load_pem_public_key(
+            bytes.fromhex(public_key)
+        )
+        # decript hash signature
+        try:
+            public_key.verify(
+                bytes.fromhex(hash_sign),
+                img_hash,
+                padding.PSS(
+                    mgf=padding.MGF1(hashes.SHA256()),
+                    salt_length=padding.PSS.MAX_LENGTH
+                ),
+                hashes.SHA256()
+            )
+        except InvalidSignature:
+            print("Invalid signature")
+            return 
+        
+
+        
         # check certificate #TODO
         pass
         # store image 
@@ -139,7 +168,6 @@ class Server():
         for key, value in image.info.items():
             info.add_text(str(key), str(value))
         # add new metadata
-        info.add_text("sample tag", "1234")
         
         # store image
         self.__sm.storage_img(image, user_name, info)

@@ -75,9 +75,9 @@ class HomeScreen(tk.Frame):
 
 # DEVELOPER OPTIONS ##################################################
         # clear server
-        # self.main_menu.add_command(label="CLEAN SERVER", command=self.clean_server)
+        self.main_menu.add_command(label="CLEAN SERVER", command=self.clean_server)
         # admin mode
-        # self.main_menu.add_command(label="LOG AS ADMIN", command=self.admin_mode)
+        self.main_menu.add_command(label="LOG AS ADMIN", command=self.admin_mode)
 
     def admin_mode(self):
         try:
@@ -88,7 +88,7 @@ class HomeScreen(tk.Frame):
         self.app.showUserScreen()
 
     def clean_server(self):
-        self.app.api.server.clear_server()
+        self.app.api._server.clear_server()
         self.initiate_main_display()
 #####################################################################
 
