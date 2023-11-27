@@ -1,8 +1,11 @@
 from .user import User
 from PIL import Image, PngImagePlugin
 from .storage_manager import StorageManager
-from cryptography.hazmat.primitives import hashes, hmac
+from cryptography.hazmat.primitives import hashes, hmac, serialization
 from cryptography.hazmat.primitives.kdf.scrypt  import Scrypt
+from cryptography.hazmat.primitives.asymmetric import rsa, padding 
+from cryptography.exceptions import InvalidSignature
+
 import re
 import uuid
 from cryptography import x509
@@ -181,6 +184,7 @@ class Server():
             raise ValueError("User or password incorrect")
         self.logger.info("   Users credentials are valid")
         
+
         self.logger.info(" Checking image integrity")
         image_metadata = image.info
         hash = image_metadata["hash"]
@@ -197,15 +201,18 @@ class Server():
             )
         )
 
+
         # regenerate hash
         self.logger.info("     Regenerating hash...")
         img_bytes = image.tobytes()
-        iv = bytes.fromhex(image_metadata["iv"])
-        salt = bytes.fromhex(image_metadata["salt"])
+        iv = bytes.fromhex(image_metadata["aes_iv"])
+        salt = bytes.fromhex(image_metadata["aes_key_salt"])
+        key = bytes.fromhex(image_metadata["hash_key"])
 
         h = hmac.HMAC(key, hashes.SHA256())
         h.update(img_bytes + iv + salt + key)
         img_hash = h.finalize()
+
         if hash != img_hash.hex():
             raise ValueError("Hashes do not match")
         self.logger.info("     Hashes match")
@@ -241,6 +248,7 @@ class Server():
                 hashes.SHA256()
             )
         except InvalidSignature:
+
             raise ValueError("Signature not valid")
         self.logger.info("     Signature is valid")
         
@@ -253,6 +261,8 @@ class Server():
         info = PngImagePlugin.PngInfo()
         for key, value in image.info.items():
             info.add_text(str(key), str(value))
+
+
         
         # store image
         self.__sm.storage_img(image, user_name, info)

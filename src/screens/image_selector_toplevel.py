@@ -6,7 +6,7 @@ from PIL import Image, ImageTk
 class ImageSelectorWindow(tk.Toplevel):
     def __init__(self, app):
         super().__init__(app.root, background="#212121")
-        self.geometry("225x550")
+        self.geometry("225x700")
         self.resizable(False, False)
         self.title("Image Selector")
         self.app = app

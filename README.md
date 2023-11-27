@@ -20,9 +20,9 @@ lugar.
 | -------- | ------------------------------------ | ---------- |
 | &#9745;      | Autenticación de usuarios            | 1          |
 | &#9745;      | Cifrado simétrico/asimétrico         | 0.75         |
-|  &#9744;      | Etiquetas de autenticación de mensajes| 0.75         |
-| &#9744; | Memoria                              | 1          |
-| &#9744;    | Defensa                              | 1.5          |
+| &#9745;      | Etiquetas de autenticación de mensajes| 0.75         |
+|  &#9745; | Memoria                              | 1          |
+|  &#9745;    | Defensa                              | 1.5          |
 
 #### Autenticación de usuarios
 

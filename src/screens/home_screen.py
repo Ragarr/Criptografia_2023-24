@@ -88,7 +88,7 @@ class HomeScreen(tk.Frame):
         self.app.showUserScreen()
 
     def clean_server(self):
-        self.app.api.server.clear_server()
+        self.app.api._server.clear_server()
         self.initiate_main_display()
 #####################################################################
 

@@ -6,6 +6,7 @@ from cryptography import x509
 from cryptography.x509.oid import NameOID
 from packages.imgproc.img_cripto_utils import ImageCryptoUtils
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
+
 from cryptography.hazmat.primitives import hashes
 from packages.authorities import PedroSanchez, Certificate
 import logging
@@ -28,6 +29,7 @@ class Client:
         self.password = None
         self.__plain_pass = None
         self.encryptor = None
+
         self.__server = Server()
         self.__private_key = rsa.generate_private_key(
             public_exponent=65537,
@@ -78,7 +80,7 @@ class Client:
     def server(self):
         return self.__server
     
-    
+
 
     def get_images(self, num: int | None = -1, username: str | None = None,
                    date: str | None = None, time: str | None = None) -> list:
@@ -108,7 +110,7 @@ class Client:
                 raise Exception("Date must be specified if time is specified")
 
         if username is None:
-            images = self.__server.get_images(num=num, username=username, date=date, time=time)
+            images = self._server.get_images(num=num, username=username, date=date, time=time)
             progress = 0
             for i in images:
                 yield round((progress / len(images)) * 100, 2), i
@@ -116,7 +118,7 @@ class Client:
             return
 
         # if the user is logged in, we will return de decrypted images
-        images = self.__server.get_images(num=num, username=username, date=date, time=time)
+        images = self._server.get_images(num=num, username=username, date=date, time=time)
         decrypted_images = []
         progress = 0
         for im in images:
@@ -134,6 +136,7 @@ class Client:
             name (str): name of the user
             password (str): password of the user
         """
+
         self.logger.info(" Registering user...")
         self.logger.info("   Checking servers certificate...")
         if not self.__check_servers_certificate(self.__server.certificate):
@@ -157,6 +160,7 @@ class Client:
         self.logger.info("  Password encrypted and sended to server")
         return self.__server.create_user(name, password)
 
+
     def logout(self):
         """
         Logs out a user from the server
@@ -173,6 +177,7 @@ class Client:
         Returns:
             bool: True if the user was logged in, False otherwise
         """
+
         self.logger.info(" Logging in...")
         self.logger.info("   Checking servers certificate...")
         if not self.__check_servers_certificate(self.__server.certificate):
@@ -202,14 +207,15 @@ class Client:
             self.password = password
             self.logger.info(" Logged in")
 
+
         else:
             self.logger.info(" User or password incorrect")
             raise ValueError("User or password incorrect")
 
     def remove_user(self) -> None:
         """Removes the user from the server"""
-        if self.__server.login(self.username, self.password):
-            self.__server.remove_user(self.username, self.password)
+        if self._server.login(self.username, self.password):
+            self._server.remove_user(self.username, self.password)
 
     def upload_photo(self, path: str, x: int = 0, y: int = 0, w: int = 200, h: int = 200) -> None:
         """Uploads a photo to the server
@@ -239,6 +245,7 @@ class Client:
         self.logger.info("     obtaining servers public key...")
         servers_pk = self.__server.certificate.certificate.public_key()
         # encrypt image 
+
         self.logger.info("     Encrypting image...")
         image = ImageCryptoUtils.encrypt(image, self.__plain_pass, x, y, w, h)
         ImageCryptoUtils.generate_image_hash(image, self.__private_key, servers_pk)
@@ -254,6 +261,7 @@ class Client:
             date (str): date of the image
             time (str): time of the image
         """
+
         return self.__server.remove_image(self.username, self.password, date, time)
 
     def __check_servers_certificate(self, certificate: Certificate) -> bool:

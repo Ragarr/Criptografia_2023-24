@@ -67,7 +67,7 @@ class StorageManager:
         """Stores an image
         Args:
             img (bytes): image
-            username (str): name of the image
+            username (str): name of the author of the image
             metadata (dict): metadata of the image
         """
         # save image
@@ -221,8 +221,8 @@ class StorageManager:
         if time is not None:
             try:
                 return [Image.open(f"{self.__path}/data/images/{username}/{date}/{time}.png")]
-            except:
-                # time not found
+            except Exception as e :
+                print(f"[ERROR - sm] {e}")
                 return []
 
         new_date = self.__load_date(date)
@@ -234,8 +234,8 @@ class StorageManager:
                     images_paths.append({"date": f"{new_date[0]}/{new_date[1]}/{new_date[2]}",
                                          "time": img_time,
                                          "path": f"{self.__path}/data/images/{username}/{new_date[0]}/{new_date[1]}/{new_date[2]}/{time}.png"})
-            except:
-                # date not found
+            except Exception as e:
+                print(f"[ERROR - sm] {e}")
                 return []
         elif len(new_date) == 2:
             try:
@@ -246,8 +246,8 @@ class StorageManager:
                         images_paths.append({"date": f"{new_date[0]}/{new_date[1]}/{day}",
                                              "time": img_time,
                                              "path": f"{self.__path}/data/images/{username}/{new_date[0]}/{new_date[1]}/{day}/{time}.png"})
-            except:
-                # date not found
+            except Exception as e:
+                print(f"[ERROR - sm] {e}")
                 return []
         elif len(new_date) == 1:
             try:
@@ -260,8 +260,8 @@ class StorageManager:
                             images_paths.append({"date": f"{new_date[0]}/{month}/{day}",
                                                  "time": img_time,
                                                  "path": f"{self.__path}/data/images/{username}/{new_date[0]}/{month}/{day}/{time}.png"})
-            except:
-                # date not found
+            except Exception as e:
+                print(f"[ERROR - sm] {e}")
                 return []
 
                 # get random images
@@ -302,8 +302,8 @@ class StorageManager:
         path = f"{self.__path}/data/images/{username}/{date}/{time}.png"
         try:
             os.remove(path)
-        except:
-            # image not found
+        except Exception as e:
+            print(f"[ERROR - sm] {e}")
             raise ValueError("Image not found")
 
         path = os.path.dirname(path)
