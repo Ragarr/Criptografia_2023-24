@@ -41,6 +41,7 @@ class App:
         self.frames[LoadingScreen].update_status(status)
 
     def showScreen(self, name):
+        #shows the screen
         frame = self.frames[name]
         self.current_screen = frame
         frame.tkraise()
