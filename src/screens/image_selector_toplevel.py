@@ -97,8 +97,7 @@ class ImageSelectorWindow(tk.Toplevel):
             self.app.showUserScreen()
             self.destroy()
         except ValueError as e:
-            print(e)
-            messagebox.showerror("Error", f"{e}")
+            messagebox.showerror("Error", str(e))
 
 
     def update_canvas_selection(self):

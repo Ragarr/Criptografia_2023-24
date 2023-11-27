@@ -1,15 +1,31 @@
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import hashes, hmac
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from .imgproc import *
 import os
 
+def cache(func):
+    saved = {}
+    def wraps(*args):
+        img = args[0].info
+        passw = args[1]
+        nhash = str((img, passw))
+        if nhash in saved:
+            return saved[nhash]
+        else:
+            res = func(*args)
+            saved[nhash] = res
+            return res
+
+    return wraps
 
 class ImageCryptoUtils:
     def __init__(self) -> None:
         pass
 
     @staticmethod
+    @cache
     def decrypt(img: Image, password: str) -> Image:
         """
         Decrypts an image using AES-192 in CTR mode
@@ -127,7 +143,7 @@ class ImageCryptoUtils:
         return img.info
 
     @staticmethod
-    def generate_image_hash(img: Image) -> None:
+    def generate_image_hash(img: Image, private_key: rsa.RSAPrivateKey, server_public_key: rsa.RSAPublicKey ) -> None:
         """
         Generates a hash of the image and writes it in the metadata
         :param img: image
@@ -143,5 +159,25 @@ class ImageCryptoUtils:
         # el key debe ir encriptado con RSA del server
         h.update(img_bytes + iv + salt + key)
         img_hash = h.finalize()
-        ImageCryptoUtils._write_metadata(img, {"hash_key": key.hex()})
-        return img_hash
+
+        signature = private_key.sign(
+            img_hash, 
+            padding.PSS(
+                mgf=padding.MGF1(hashes.SHA256()),
+                salt_length=padding.PSS.MAX_LENGTH
+            ),
+            hashes.SHA256()
+        )
+
+        # encrypt key with server public key
+        key = server_public_key.encrypt(
+            key,
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None
+            )
+        )
+
+        ImageCryptoUtils.__write_metadata(img, {"hash": img_hash.hex(), "signature": signature.hex(),"key": key.hex()})
+
